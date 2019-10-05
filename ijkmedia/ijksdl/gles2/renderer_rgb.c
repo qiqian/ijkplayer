@@ -21,12 +21,12 @@
 
 #include "internal.h"
 
-static GLboolean rgb_use(IJK_GLES2_Renderer *renderer)
+static GLboolean rgb_use(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog)
 {
     ALOGI("use render rgb\n");
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    glUseProgram(renderer->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
+    glUseProgram(prog->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
 
     if (0 == renderer->plane_textures[0])
         glGenTextures(1, renderer->plane_textures);
@@ -98,7 +98,7 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_rgb565()
     if (!renderer)
         goto fail;
 
-    renderer->us2_sampler[0] = glGetUniformLocation(renderer->program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
+    renderer->us2_sampler[0] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
 
     renderer->func_use            = rgb_use;
     renderer->func_getBufferWidth = rgb565_getBufferWidth;
@@ -164,7 +164,7 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_rgb888()
     if (!renderer)
         goto fail;
 
-    renderer->us2_sampler[0] = glGetUniformLocation(renderer->program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
+    renderer->us2_sampler[0] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
 
     renderer->func_use            = rgb_use;
     renderer->func_getBufferWidth = rgb888_getBufferWidth;
@@ -230,7 +230,7 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_rgbx8888()
     if (!renderer)
         goto fail;
 
-    renderer->us2_sampler[0] = glGetUniformLocation(renderer->program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
+    renderer->us2_sampler[0] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
 
     renderer->func_use            = rgb_use;
     renderer->func_getBufferWidth = rgbx8888_getBufferWidth;

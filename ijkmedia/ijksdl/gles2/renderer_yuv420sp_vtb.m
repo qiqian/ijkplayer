@@ -32,12 +32,12 @@ typedef struct IJK_GLES2_Renderer_Opaque
     CFTypeRef                 color_attachments;
 } IJK_GLES2_Renderer_Opaque;
 
-static GLboolean yuv420sp_vtb_use(IJK_GLES2_Renderer *renderer)
+static GLboolean yuv420sp_vtb_use(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog)
 {
     ALOGI("use render yuv420sp_vtb\n");
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    glUseProgram(renderer->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
+    glUseProgram(prog->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
 
     for (int i = 0; i < 2; ++i) {
         glUniform1i(renderer->us2_sampler[i], i);

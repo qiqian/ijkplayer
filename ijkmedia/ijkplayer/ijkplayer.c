@@ -387,6 +387,10 @@ static int ijkmp_prepare_async_l(IjkMediaPlayer *mp)
 {
     assert(mp);
 
+    // always enable opengles
+    //ffp_set_option_int(mp->ffplayer, FFP_OPT_CATEGORY_PLAYER, "opensles", 1);
+    //ffp_set_option(mp->ffplayer, FFP_OPT_CATEGORY_PLAYER, "overlay-format", "fcc-_es2");
+
     MPST_RET_IF_EQ(mp->mp_state, MP_STATE_IDLE);
     // MPST_RET_IF_EQ(mp->mp_state, MP_STATE_INITIALIZED);
     MPST_RET_IF_EQ(mp->mp_state, MP_STATE_ASYNC_PREPARING);

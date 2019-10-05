@@ -48,7 +48,7 @@ dependencies {
     compile project(':ijkplayer-exo')
 
     //all32Compile project(':ijkplayer-armv5')
-    all32Compile project(':ijkplayer-armv7a')
+    //all32Compile project(':ijkplayer-armv7a')
     all32Compile project(':ijkplayer-x86')
 
     //all64Compile project(':ijkplayer-armv5')

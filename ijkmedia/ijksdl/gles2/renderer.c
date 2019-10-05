@@ -52,21 +52,31 @@ static void IJK_GLES2_printProgramInfo(GLuint program)
         free(buf_heap);
 }
 
+static void IJK_GLES2_Renderer_reset_ShaderProgram(IJK_GLES2_ShaderProgram * prog)
+{
+    if (prog->vertex_shader)
+        glDeleteShader(prog->vertex_shader);
+    if (prog->fragment_shader)
+        glDeleteShader(prog->fragment_shader);
+    if (prog->program)
+        glDeleteProgram(prog->program);
+    if (prog->framebuffer)
+        glDeleteFramebuffers(1, &prog->framebuffer);
+
+    prog->vertex_shader   = 0;
+    prog->fragment_shader = 0;
+    prog->program         = 0;
+    prog->framebuffer     = 0;
+}
+
 void IJK_GLES2_Renderer_reset(IJK_GLES2_Renderer *renderer)
 {
     if (!renderer)
         return;
 
-    if (renderer->vertex_shader)
-        glDeleteShader(renderer->vertex_shader);
-    if (renderer->fragment_shader)
-        glDeleteShader(renderer->fragment_shader);
-    if (renderer->program)
-        glDeleteProgram(renderer->program);
-
-    renderer->vertex_shader   = 0;
-    renderer->fragment_shader = 0;
-    renderer->program         = 0;
+    IJK_GLES2_Renderer_reset_ShaderProgram(&renderer->frame_decode);
+    IJK_GLES2_Renderer_reset_ShaderProgram(&renderer->logo_detection);
+    IJK_GLES2_Renderer_reset_ShaderProgram(&renderer->logo_removal);
 
     for (int i = 0; i < IJK_GLES2_MAX_PLANE; ++i) {
         if (renderer->plane_textures[i]) {
@@ -74,6 +84,11 @@ void IJK_GLES2_Renderer_reset(IJK_GLES2_Renderer *renderer)
             renderer->plane_textures[i] = 0;
         }
     }
+
+    glDeleteTextures(1, &renderer->frame_current);
+    glDeleteTextures(1, &renderer->frame_reference);
+    glDeleteTextures(1, &renderer->frame_template_building);
+    glDeleteTextures(1, &renderer->frame_template_using);
 }
 
 void IJK_GLES2_Renderer_free(IJK_GLES2_Renderer *renderer)
@@ -107,6 +122,34 @@ void IJK_GLES2_Renderer_freeP(IJK_GLES2_Renderer **renderer)
     *renderer = NULL;
 }
 
+static GLboolean IJK_GLES2_create_ShaderProgram(IJK_GLES2_ShaderProgram * prog, const char * fragSrc)
+{
+    prog->vertex_shader = IJK_GLES2_loadShader(GL_VERTEX_SHADER, IJK_GLES2_getVertexShader_default());
+    if (!prog->vertex_shader)
+        return GL_FALSE;
+
+    prog->fragment_shader = IJK_GLES2_loadShader(GL_FRAGMENT_SHADER, fragSrc);
+    if (!prog->fragment_shader)
+        return GL_FALSE;
+
+    prog->program = glCreateProgram();                          IJK_GLES2_checkError("glCreateProgram");
+    if (!prog->program)
+        return GL_FALSE;
+
+    glAttachShader(prog->program, prog->vertex_shader);     IJK_GLES2_checkError("glAttachShader(vertex)");
+    glAttachShader(prog->program, prog->fragment_shader);   IJK_GLES2_checkError("glAttachShader(fragment)");
+    glLinkProgram(prog->program);                               IJK_GLES2_checkError("glLinkProgram");
+    GLint link_status = GL_FALSE;
+    glGetProgramiv(prog->program, GL_LINK_STATUS, &link_status);
+    if (!link_status)
+        return GL_FALSE;
+
+    prog->av4_position = glGetAttribLocation(prog->program, "av4_Position");                IJK_GLES2_checkError_TRACE("glGetAttribLocation(av4_Position)");
+    prog->av2_texcoord = glGetAttribLocation(prog->program, "av2_Texcoord");                IJK_GLES2_checkError_TRACE("glGetAttribLocation(av2_Texcoord)");
+    prog->um4_mvp      = glGetUniformLocation(prog->program, "um4_ModelViewProjection");    IJK_GLES2_checkError_TRACE("glGetUniformLocation(um4_ModelViewProjection)");
+    return GL_TRUE;
+}
+
 IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_base(const char *fragment_shader_source)
 {
     assert(fragment_shader_source);
@@ -115,37 +158,15 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_base(const char *fragment_shader_s
     if (!renderer)
         goto fail;
 
-    renderer->vertex_shader = IJK_GLES2_loadShader(GL_VERTEX_SHADER, IJK_GLES2_getVertexShader_default());
-    if (!renderer->vertex_shader)
+    if (!IJK_GLES2_create_ShaderProgram(&renderer->frame_decode, fragment_shader_source))
         goto fail;
-
-    renderer->fragment_shader = IJK_GLES2_loadShader(GL_FRAGMENT_SHADER, fragment_shader_source);
-    if (!renderer->fragment_shader)
-        goto fail;
-
-    renderer->program = glCreateProgram();                          IJK_GLES2_checkError("glCreateProgram");
-    if (!renderer->program)
-        goto fail;
-
-    glAttachShader(renderer->program, renderer->vertex_shader);     IJK_GLES2_checkError("glAttachShader(vertex)");
-    glAttachShader(renderer->program, renderer->fragment_shader);   IJK_GLES2_checkError("glAttachShader(fragment)");
-    glLinkProgram(renderer->program);                               IJK_GLES2_checkError("glLinkProgram");
-    GLint link_status = GL_FALSE;
-    glGetProgramiv(renderer->program, GL_LINK_STATUS, &link_status);
-    if (!link_status)
-        goto fail;
-
-
-    renderer->av4_position = glGetAttribLocation(renderer->program, "av4_Position");                IJK_GLES2_checkError_TRACE("glGetAttribLocation(av4_Position)");
-    renderer->av2_texcoord = glGetAttribLocation(renderer->program, "av2_Texcoord");                IJK_GLES2_checkError_TRACE("glGetAttribLocation(av2_Texcoord)");
-    renderer->um4_mvp      = glGetUniformLocation(renderer->program, "um4_ModelViewProjection");    IJK_GLES2_checkError_TRACE("glGetUniformLocation(um4_ModelViewProjection)");
 
     return renderer;
 
 fail:
 
-    if (renderer && renderer->program)
-        IJK_GLES2_printProgramInfo(renderer->program);
+    if (renderer && renderer->frame_decode.program)
+        IJK_GLES2_printProgramInfo(renderer->frame_decode.program);
 
     IJK_GLES2_Renderer_free(renderer);
     return NULL;
@@ -180,12 +201,32 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create(SDL_VoutOverlay *overlay)
     }
 
     renderer->format = overlay->format;
+
+    // post process
+    if (!IJK_GLES2_create_ShaderProgram(&renderer->logo_detection, IJK_GLES2_getFragmentShader_logo_detection()))
+        goto fail;
+    if (!IJK_GLES2_create_ShaderProgram(&renderer->logo_removal, IJK_GLES2_getFragmentShader_logo_removal()))
+        goto fail;
+
     return renderer;
+
+    fail:
+
+    if (renderer && renderer->frame_decode.program)
+        IJK_GLES2_printProgramInfo(renderer->frame_decode.program);
+    if (renderer && renderer->logo_detection.program)
+        IJK_GLES2_printProgramInfo(renderer->logo_detection.program);
+    if (renderer && renderer->logo_removal.program)
+        IJK_GLES2_printProgramInfo(renderer->logo_removal.program);
+
+    IJK_GLES2_Renderer_free(renderer);
+    return NULL;
 }
 
 GLboolean IJK_GLES2_Renderer_isValid(IJK_GLES2_Renderer *renderer)
 {
-    return renderer && renderer->program ? GL_TRUE : GL_FALSE;
+    return renderer && renderer->frame_decode.program && renderer->logo_detection.program && renderer->logo_removal.program
+            ? GL_TRUE : GL_FALSE;
 }
 
 GLboolean IJK_GLES2_Renderer_isFormat(IJK_GLES2_Renderer *renderer, int format)
@@ -278,10 +319,10 @@ static void IJK_GLES2_Renderer_Vertices_apply(IJK_GLES2_Renderer *renderer)
     renderer->vertices[7] =   nH;
 }
 
-static void IJK_GLES2_Renderer_Vertices_reloadVertex(IJK_GLES2_Renderer *renderer)
+static void IJK_GLES2_Renderer_Vertices_reloadVertex(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog)
 {
-    glVertexAttribPointer(renderer->av4_position, 2, GL_FLOAT, GL_FALSE, 0, renderer->vertices);    IJK_GLES2_checkError_TRACE("glVertexAttribPointer(av2_texcoord)");
-    glEnableVertexAttribArray(renderer->av4_position);                                      IJK_GLES2_checkError_TRACE("glEnableVertexAttribArray(av2_texcoord)");
+    glVertexAttribPointer(prog->av4_position, 2, GL_FLOAT, GL_FALSE, 0, renderer->vertices);    IJK_GLES2_checkError_TRACE("glVertexAttribPointer(av2_texcoord)");
+    glEnableVertexAttribArray(prog->av4_position);                                      IJK_GLES2_checkError_TRACE("glEnableVertexAttribArray(av2_texcoord)");
 }
 
 #define IJK_GLES2_GRAVITY_MIN                   (0)
@@ -332,33 +373,33 @@ static void IJK_GLES2_Renderer_TexCoords_cropRight(IJK_GLES2_Renderer *renderer,
     renderer->texcoords[7] = 0.0f;
 }
 
-static void IJK_GLES2_Renderer_TexCoords_reloadVertex(IJK_GLES2_Renderer *renderer)
+static void IJK_GLES2_Renderer_TexCoords_reloadVertex(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog)
 {
-    glVertexAttribPointer(renderer->av2_texcoord, 2, GL_FLOAT, GL_FALSE, 0, renderer->texcoords);   IJK_GLES2_checkError_TRACE("glVertexAttribPointer(av2_texcoord)");
-    glEnableVertexAttribArray(renderer->av2_texcoord);                                              IJK_GLES2_checkError_TRACE("glEnableVertexAttribArray(av2_texcoord)");
+    glVertexAttribPointer(prog->av2_texcoord, 2, GL_FLOAT, GL_FALSE, 0, renderer->texcoords);   IJK_GLES2_checkError_TRACE("glVertexAttribPointer(av2_texcoord)");
+    glEnableVertexAttribArray(prog->av2_texcoord);                                              IJK_GLES2_checkError_TRACE("glEnableVertexAttribArray(av2_texcoord)");
 }
 
 /*
  * Per-Renderer routine
  */
-GLboolean IJK_GLES2_Renderer_use(IJK_GLES2_Renderer *renderer)
+GLboolean IJK_GLES2_Renderer_use(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram *prog)
 {
-    if (!renderer)
+    if (!prog)
         return GL_FALSE;
 
     assert(renderer->func_use);
-    if (!renderer->func_use(renderer))
+    if (!renderer->func_use(renderer, prog))
         return GL_FALSE;
 
     IJK_GLES_Matrix modelViewProj;
     IJK_GLES2_loadOrtho(&modelViewProj, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
-    glUniformMatrix4fv(renderer->um4_mvp, 1, GL_FALSE, modelViewProj.m);                    IJK_GLES2_checkError_TRACE("glUniformMatrix4fv(um4_mvp)");
+    glUniformMatrix4fv(prog->um4_mvp, 1, GL_FALSE, modelViewProj.m);                    IJK_GLES2_checkError_TRACE("glUniformMatrix4fv(um4_mvp)");
 
     IJK_GLES2_Renderer_TexCoords_reset(renderer);
-    IJK_GLES2_Renderer_TexCoords_reloadVertex(renderer);
+    IJK_GLES2_Renderer_TexCoords_reloadVertex(renderer, prog);
 
     IJK_GLES2_Renderer_Vertices_reset(renderer);
-    IJK_GLES2_Renderer_Vertices_reloadVertex(renderer);
+    IJK_GLES2_Renderer_Vertices_reloadVertex(renderer, prog);
 
     return GL_TRUE;
 }
@@ -370,6 +411,12 @@ GLboolean IJK_GLES2_Renderer_renderOverlay(IJK_GLES2_Renderer *renderer, SDL_Vou
 {
     if (!renderer || !renderer->func_uploadTexture)
         return GL_FALSE;
+
+    if (!IJK_GLES2_Renderer_use(renderer, &renderer->frame_decode)) {
+        ALOGE("[EGL] Could not use render.");
+        return GL_FALSE;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glClear(GL_COLOR_BUFFER_BIT);               IJK_GLES2_checkError_TRACE("glClear");
 
@@ -410,7 +457,7 @@ GLboolean IJK_GLES2_Renderer_renderOverlay(IJK_GLES2_Renderer *renderer, SDL_Vou
         renderer->vertices_changed = 0;
 
         IJK_GLES2_Renderer_Vertices_apply(renderer);
-        IJK_GLES2_Renderer_Vertices_reloadVertex(renderer);
+        IJK_GLES2_Renderer_Vertices_reloadVertex(renderer, &renderer->frame_decode);
 
         renderer->buffer_width  = buffer_width;
         renderer->visible_width = visible_width;
@@ -420,7 +467,7 @@ GLboolean IJK_GLES2_Renderer_renderOverlay(IJK_GLES2_Renderer *renderer, SDL_Vou
 
         IJK_GLES2_Renderer_TexCoords_reset(renderer);
         IJK_GLES2_Renderer_TexCoords_cropRight(renderer, padding_normalized);
-        IJK_GLES2_Renderer_TexCoords_reloadVertex(renderer);
+        IJK_GLES2_Renderer_TexCoords_reloadVertex(renderer, &renderer->frame_decode);
     }
 
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);      IJK_GLES2_checkError_TRACE("glDrawArrays");

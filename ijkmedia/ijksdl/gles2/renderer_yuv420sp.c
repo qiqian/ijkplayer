@@ -25,12 +25,12 @@
 #include "ijksdl_vout_overlay_videotoolbox.h"
 #endif
 
-static GLboolean yuv420sp_use(IJK_GLES2_Renderer *renderer)
+static GLboolean yuv420sp_use(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog)
 {
     ALOGI("use render yuv420sp\n");
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    glUseProgram(renderer->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
+    glUseProgram(prog->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
 
     if (0 == renderer->plane_textures[0])
         glGenTextures(2, renderer->plane_textures);
@@ -108,10 +108,10 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_yuv420sp()
     if (!renderer)
         goto fail;
 
-    renderer->us2_sampler[0] = glGetUniformLocation(renderer->program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
-    renderer->us2_sampler[1] = glGetUniformLocation(renderer->program, "us2_SamplerY"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerY)");
+    renderer->us2_sampler[0] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
+    renderer->us2_sampler[1] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerY"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerY)");
 
-    renderer->um3_color_conversion = glGetUniformLocation(renderer->program, "um3_ColorConversion"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(um3_ColorConversionMatrix)");
+    renderer->um3_color_conversion = glGetUniformLocation(renderer->frame_decode.program, "um3_ColorConversion"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(um3_ColorConversionMatrix)");
 
     renderer->func_use            = yuv420sp_use;
     renderer->func_getBufferWidth = yuv420sp_getBufferWidth;

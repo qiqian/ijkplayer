@@ -35,24 +35,39 @@
 
 typedef struct IJK_GLES2_Renderer_Opaque IJK_GLES2_Renderer_Opaque;
 
-typedef struct IJK_GLES2_Renderer
+typedef struct IJK_GLES2_ShaderProgram
 {
-    IJK_GLES2_Renderer_Opaque *opaque;
-
     GLuint program;
 
     GLuint vertex_shader;
     GLuint fragment_shader;
-    GLuint plane_textures[IJK_GLES2_MAX_PLANE];
 
     GLuint av4_position;
     GLuint av2_texcoord;
     GLuint um4_mvp;
 
+    GLuint framebuffer;
+} IJK_GLES2_ShaderProgram;
+
+typedef struct IJK_GLES2_Renderer
+{
+    IJK_GLES2_Renderer_Opaque *opaque;
+
+    IJK_GLES2_ShaderProgram frame_decode;
+    IJK_GLES2_ShaderProgram logo_detection;
+    IJK_GLES2_ShaderProgram logo_removal;
+
+    GLuint plane_textures[IJK_GLES2_MAX_PLANE];
+
+    GLuint frame_current;
+    GLuint frame_reference;
+    GLuint frame_template_using;
+    GLuint frame_template_building;
+
     GLuint us2_sampler[IJK_GLES2_MAX_PLANE];
     GLuint um3_color_conversion;
 
-    GLboolean (*func_use)(IJK_GLES2_Renderer *renderer);
+    GLboolean (*func_use)(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog);
     GLsizei   (*func_getBufferWidth)(IJK_GLES2_Renderer *renderer, SDL_VoutOverlay *overlay);
     GLboolean (*func_uploadTexture)(IJK_GLES2_Renderer *renderer, SDL_VoutOverlay *overlay);
     GLvoid    (*func_destroy)(IJK_GLES2_Renderer *renderer);
@@ -88,6 +103,8 @@ const char *IJK_GLES2_getFragmentShader_yuv420p();
 const char *IJK_GLES2_getFragmentShader_yuv444p10le();
 const char *IJK_GLES2_getFragmentShader_yuv420sp();
 const char *IJK_GLES2_getFragmentShader_rgb();
+const char *IJK_GLES2_getFragmentShader_logo_detection();
+const char *IJK_GLES2_getFragmentShader_logo_removal();
 
 const GLfloat *IJK_GLES2_getColorMatrix_bt709();
 const GLfloat *IJK_GLES2_getColorMatrix_bt601();
