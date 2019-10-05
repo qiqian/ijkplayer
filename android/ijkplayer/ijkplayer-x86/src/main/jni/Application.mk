@@ -17,7 +17,7 @@
 # License along with ijkPlayer; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
-APP_OPTIM := release
+APP_OPTIM := debug
 APP_PLATFORM := android-9
 APP_ABI := x86
 NDK_TOOLCHAIN_VERSION=4.9

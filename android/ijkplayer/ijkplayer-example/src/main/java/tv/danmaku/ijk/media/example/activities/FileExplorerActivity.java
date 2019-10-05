@@ -44,11 +44,11 @@ public class FileExplorerActivity extends AppActivity {
             mSettings = new Settings(this);
         }
 
-        String lastDirectory = mSettings.getLastDirectory();
-        if (!TextUtils.isEmpty(lastDirectory) && new File(lastDirectory).isDirectory())
-            doOpenDirectory(lastDirectory, false);
-        else
-            doOpenDirectory("/", false);
+//        String lastDirectory = mSettings.getLastDirectory();
+//        if (!TextUtils.isEmpty(lastDirectory) && new File(lastDirectory).isDirectory())
+//            doOpenDirectory(lastDirectory, false);
+//        else
+            doOpenDirectory("/sdcard/Download", false);
     }
 
     @Override

@@ -40,17 +40,17 @@ fi
 
 do_sub_cmd () {
     SUB_CMD=$1
-    if [ -L "./android-ndk-prof" ]; then
-        rm android-ndk-prof
-    fi
+#    if [ -L "./android-ndk-prof" ]; then
+#        rm android-ndk-prof
+#    fi
 
-    if [ "$PARAM_SUB_CMD" = 'prof' ]; then
-        echo 'profiler build: YES';
-        ln -s ../../../../../../ijkprof/android-ndk-profiler/jni android-ndk-prof
-    else
-        echo 'profiler build: NO';
-        ln -s ../../../../../../ijkprof/android-ndk-profiler-dummy/jni android-ndk-prof
-    fi
+#    if [ "$PARAM_SUB_CMD" = 'prof' ]; then
+#        echo 'profiler build: YES';
+#        ln -s ../../../../../../ijkprof/android-ndk-profiler/jni android-ndk-prof
+#    else
+#        echo 'profiler build: NO';
+#        ln -s ../../../../../../ijkprof/android-ndk-profiler-dummy/jni android-ndk-prof
+#    fi
 
     case $SUB_CMD in
         prof)

@@ -346,12 +346,19 @@ do
     done
 done
 
-$CC -lm -lz -shared --sysroot=$FF_SYSROOT -Wl,--no-undefined -Wl,-z,noexecstack $FF_EXTRA_LDFLAGS \
-    -Wl,-soname,libijkffmpeg.so \
-    $FF_C_OBJ_FILES \
-    $FF_ASM_OBJ_FILES \
-    $FF_DEP_LIBS \
-    -o $FF_PREFIX/libijkffmpeg.so
+linkargs=.linkargs-tmp
+PRIVATE_OBJECTS="$FF_C_OBJ_FILES $FF_ASM_OBJ_FILES $FF_DEP_LIBS" 
+
+echo \
+	-lm -lz -shared --sysroot=$FF_SYSROOT -Wl,--no-undefined -Wl,-z,noexecstack $FF_EXTRA_LDFLAGS \
+	-Wl,-soname,libijkffmpeg.so \
+	> $linkargs
+for obj in $PRIVATE_OBJECTS; do
+       echo "$obj" >> $linkargs
+done
+echo "-o $FF_PREFIX/libijkffmpeg.so" >> $linkargs
+
+$CC @$linkargs
 
 mysedi() {
     f=$1
