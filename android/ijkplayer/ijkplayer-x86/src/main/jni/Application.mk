@@ -25,7 +25,7 @@ APP_PIE := false
 
 APP_STL :=  c++_static
 
-APP_CFLAGS := -O3 -Wall -pipe \
+APP_CFLAGS := -Wall -pipe \
     -ffast-math \
     -fstrict-aliasing -Werror=strict-aliasing \
     -Wa,--noexecstack \

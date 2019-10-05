@@ -48,7 +48,8 @@ public class FileExplorerActivity extends AppActivity {
 //        if (!TextUtils.isEmpty(lastDirectory) && new File(lastDirectory).isDirectory())
 //            doOpenDirectory(lastDirectory, false);
 //        else
-            doOpenDirectory("/sdcard/Download", false);
+        doOpenDirectory("/sdcard/Download", false);
+//        doOpenDirectory("/mnt/sda/sda1/img", false);
     }
 
     @Override

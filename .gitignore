@@ -43,3 +43,7 @@ xcshareddata
 
 ndkBuild
 config/module.sh
+
+*.stackdump
+
+ndk_locator_record.json
