@@ -165,7 +165,7 @@ static EGLBoolean IJK_EGL_makeCurrent(IJK_EGL* egl, EGLNativeWindowType window)
 
 
     static const EGLint configAttribs[] = {
-        EGL_RENDERABLE_TYPE,    EGL_OPENGL_ES2_BIT,
+        EGL_RENDERABLE_TYPE,    EGL_OPENGL_ES3_BIT_KHR,//EGL_OPENGL_ES2_BIT,
         EGL_SURFACE_TYPE,       EGL_WINDOW_BIT,
         EGL_BLUE_SIZE,          8,
         EGL_GREEN_SIZE,         8,
@@ -174,7 +174,7 @@ static EGLBoolean IJK_EGL_makeCurrent(IJK_EGL* egl, EGLNativeWindowType window)
     };
 
     static const EGLint contextAttribs[] = {
-        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_CONTEXT_CLIENT_VERSION, 3,
         EGL_NONE
     };
 
@@ -286,53 +286,13 @@ static EGLBoolean IJK_EGL_prepareRenderer(IJK_EGL* egl, SDL_VoutOverlay *overlay
             return EGL_FALSE;
         }
 
-        if (!IJK_GLES2_Renderer_use(opaque->renderer, &opaque->renderer->frame_decode)) {
+        if (!IJK_GLES2_Renderer_use(opaque->renderer, &opaque->renderer->prog_frame_decode)) {
             ALOGE("[EGL] Could not use render.");
             IJK_GLES2_Renderer_freeP(&opaque->renderer);
             return EGL_FALSE;
         }
 
-        // create textures
-        glGenTextures(1, &opaque->renderer->frame_current);
-        glBindTexture(GL_TEXTURE_2D, opaque->renderer->frame_current);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, overlay->w, overlay->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-        glGenTextures(1, &opaque->renderer->frame_reference);
-        glBindTexture(GL_TEXTURE_2D, opaque->renderer->frame_reference);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, overlay->w, overlay->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-        glGenTextures(1, &opaque->renderer->frame_template_building);
-        glBindTexture(GL_TEXTURE_2D, opaque->renderer->frame_template_building);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, overlay->w, overlay->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-        glGenTextures(1, &opaque->renderer->frame_template_using);
-        glBindTexture(GL_TEXTURE_2D, opaque->renderer->frame_template_using);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, overlay->w, overlay->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-
-        // fb
-        glGenFramebuffers(1, &opaque->renderer->frame_decode.framebuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, opaque->renderer->frame_decode.framebuffer);
-        glBindTexture(GL_TEXTURE_2D, opaque->renderer->frame_current);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, opaque->renderer->frame_current, 0);
-        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            return EGL_FALSE;
-
-        glGenFramebuffers(1, &opaque->renderer->logo_detection.framebuffer);
-        glBindFramebuffer(GL_FRAMEBUFFER, opaque->renderer->logo_detection.framebuffer);
-        glBindTexture(GL_TEXTURE_2D, opaque->renderer->frame_template_building);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, opaque->renderer->frame_template_building, 0);
-        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            return EGL_FALSE;
-
-        opaque->renderer->logo_removal.framebuffer = 0;
+        IJK_GLES2_Renderer_setPostproess(opaque->renderer, overlay->w, overlay->h);
     }
 
     if (!IJK_EGL_setSurfaceSize(egl, overlay->w, overlay->h)) {

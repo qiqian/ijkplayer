@@ -24,36 +24,17 @@
 static const char g_shader[] = IJK_GLES_STRING(
     precision highp float;
     varying   highp vec2 vv2_Texcoord;
-    uniform   lowp  sampler2D us2_SamplerX; // current
-    uniform   lowp  sampler2D us2_SamplerY; // logo-mask
-    uniform   highp vec2 screenSize;
+    uniform   lowp  sampler2D us2_SamplerX;
 
     void main()
     {
-        vec2 uv = vec2(vv2_Texcoord.x, 1.0 - vv2_Texcoord.y);
-
-        vec3 cur = texture2D(us2_SamplerX, uv).rgb;
-        float logo = texture2D(us2_SamplerY, uv).r;
-
-        if (logo == 1.0) {
-            // de-logo
-            int n = 0;
-            int step = 1;
-            float x_step = 1.0 / screenSize.x;
-            float y_step = 1.0 / screenSize.y;
-
-            gl_FragColor.xyz = cur * 0.5;
-        }
-        else
-        {
-            gl_FragColor.xyz = cur;
-        }
-
-        gl_FragColor.w = 1.0;
+        vec2 texcoord = vv2_Texcoord;
+        texcoord.y = 1.0 - texcoord.y;
+        gl_FragColor = vec4(texture2D(us2_SamplerX, texcoord).rgb, 1);
     }
 );
 
-const char *IJK_GLES2_getFragmentShader_logo_removal()
+const char *IJK_GLES2_getFragmentShader_flip_blit()
 {
     return g_shader;
 }

@@ -24,11 +24,41 @@
 static const char g_shader[] = IJK_GLES_STRING(
     precision highp float;
     varying   highp vec2 vv2_Texcoord;
-    uniform   lowp  sampler2D us2_SamplerX;
+    uniform   lowp  sampler2D us2_SamplerX; // ref
+    uniform   lowp  sampler2D us2_SamplerY; // cur
+    uniform   lowp  sampler2D us2_SamplerZ; // lastFrame
+    uniform   lowp  sampler2D us2_SamplerW; // logo
 
+    vec3 detect_logo(float threshold, vec3 ref, vec3 cur, vec3 exsiting_logo)
+    {
+        vec3 diff = step(abs(ref - cur), vec3(threshold, threshold, threshold));
+        float d = min(1.0, diff.x + diff.y + diff.z);
+        return min(vec3(d, d, d), exsiting_logo);
+    }
     void main()
     {
-        gl_FragColor = vec4(texture2D(us2_SamplerX, vv2_Texcoord).rgb, 1);
+        vec2 uv = vec2(vv2_Texcoord.x, 1.0 - vv2_Texcoord.y);
+        vec3 ref = texture2D(us2_SamplerX, uv).rgb;
+        vec3 cur = texture2D(us2_SamplerY, uv).rgb;
+        vec3 lastFrame = texture2D(us2_SamplerZ, uv).rgb;
+        vec3 logo = texture2D(us2_SamplerW, uv).rgb;
+
+        float threshold;
+        vec3 diff;
+        float d;
+        vec3 merged_diff = logo;
+
+        merged_diff = detect_logo(0.15, lastFrame, cur, merged_diff);
+        merged_diff = detect_logo(0.3, ref, cur, merged_diff);
+
+        gl_FragColor.xyz = merged_diff;
+        gl_FragColor.w = 1.0;
+
+        // min diff
+//        gl_FragColor.xyz = max(abs(ref - cur), logo);
+//        gl_FragColor.xyz = abs(ref - cur);
+
+
     }
 );
 

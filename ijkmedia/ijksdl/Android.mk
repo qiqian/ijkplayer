@@ -21,7 +21,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 #LOCAL_CFLAGS += -std=c99
-LOCAL_LDLIBS += -llog -landroid -lOpenSLES -lEGL -lGLESv2
+LOCAL_LDLIBS += -llog -landroid -lOpenSLES -lEGL -lGLESv3
 
 
 LOCAL_C_INCLUDES += $(LOCAL_PATH)
@@ -48,8 +48,10 @@ LOCAL_SRC_FILES += gles2/renderer_yuv420p.c
 LOCAL_SRC_FILES += gles2/renderer_yuv444p10le.c
 LOCAL_SRC_FILES += gles2/shader.c
 LOCAL_SRC_FILES += gles2/fsh/rgb.fsh.c
+LOCAL_SRC_FILES += gles2/fsh/flip_blit.fsh.c
 LOCAL_SRC_FILES += gles2/fsh/logo-detection.fsh.c
 LOCAL_SRC_FILES += gles2/fsh/logo-removal.fsh.c
+LOCAL_SRC_FILES += gles2/fsh/logo-debug.fsh.c
 LOCAL_SRC_FILES += gles2/fsh/yuv420p.fsh.c
 LOCAL_SRC_FILES += gles2/fsh/yuv444p10le.fsh.c
 LOCAL_SRC_FILES += gles2/vsh/mvp.vsh.c

@@ -26,9 +26,10 @@
 #include <OpenGLES/ES2/gl.h>
 #include <OpenGLES/ES2/glext.h>
 #else
-#include <GLES2/gl2.h>
-#include <GLES2/gl2ext.h>
-#include <GLES2/gl2platform.h>
+#include <GLES3/gl3.h>
+#include <GLES3/gl31.h>
+#include <GLES3/gl3ext.h>
+#include <GLES3/gl3platform.h>
 #endif
 
 typedef struct SDL_VoutOverlay SDL_VoutOverlay;
@@ -37,7 +38,7 @@ typedef struct SDL_VoutOverlay SDL_VoutOverlay;
  * Common
  */
 
-#ifdef DEBUG
+#ifndef DEBUG
 #define IJK_GLES2_checkError_TRACE(op)
 #define IJK_GLES2_checkError_DEBUG(op)
 #else
@@ -62,6 +63,7 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create(SDL_VoutOverlay *overlay);
 void      IJK_GLES2_Renderer_reset(IJK_GLES2_Renderer *renderer);
 void      IJK_GLES2_Renderer_free(IJK_GLES2_Renderer *renderer);
 void      IJK_GLES2_Renderer_freeP(IJK_GLES2_Renderer **renderer);
+void      IJK_GLES2_Renderer_setPostproess(IJK_GLES2_Renderer *renderer, int overlay_width, int overlay_height);
 
 GLboolean IJK_GLES2_Renderer_setupGLES();
 GLboolean IJK_GLES2_Renderer_isValid(IJK_GLES2_Renderer *renderer);

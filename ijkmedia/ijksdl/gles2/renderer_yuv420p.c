@@ -23,10 +23,8 @@
 
 static GLboolean yuv420p_use(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog)
 {
-    ALOGI("use render yuv420p\n");
+    ALOGD("use render yuv420p\n");
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    glUseProgram(prog->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
 
     if (0 == renderer->plane_textures[0])
         glGenTextures(3, renderer->plane_textures);
@@ -40,10 +38,10 @@ static GLboolean yuv420p_use(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgr
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-        glUniform1i(renderer->us2_sampler[i], i);
+        glUniform1i(prog->us2_sampler[i], i);
     }
 
-    glUniformMatrix3fv(renderer->um3_color_conversion, 1, GL_FALSE, IJK_GLES2_getColorMatrix_bt709());
+    glUniformMatrix3fv(prog->um3_color_conversion, 1, GL_FALSE, IJK_GLES2_getColorMatrix_bt709());
 
     return GL_TRUE;
 }
@@ -103,12 +101,6 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_yuv420p()
     IJK_GLES2_Renderer *renderer = IJK_GLES2_Renderer_create_base(IJK_GLES2_getFragmentShader_yuv420p());
     if (!renderer)
         goto fail;
-
-    renderer->us2_sampler[0] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
-    renderer->us2_sampler[1] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerY"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerY)");
-    renderer->us2_sampler[2] = glGetUniformLocation(renderer->frame_decode.program, "us2_SamplerZ"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerZ)");
-
-    renderer->um3_color_conversion = glGetUniformLocation(renderer->frame_decode.program, "um3_ColorConversion"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(um3_ColorConversionMatrix)");
 
     renderer->func_use            = yuv420p_use;
     renderer->func_getBufferWidth = yuv420p_getBufferWidth;

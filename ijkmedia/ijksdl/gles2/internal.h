@@ -35,6 +35,10 @@
 
 typedef struct IJK_GLES2_Renderer_Opaque IJK_GLES2_Renderer_Opaque;
 
+#define MAX_SAMPLERS 6
+#if IJK_GLES2_MAX_PLANE > MAX_SAMPLERS
+#error invalid sampler count
+#endif
 typedef struct IJK_GLES2_ShaderProgram
 {
     GLuint program;
@@ -46,26 +50,33 @@ typedef struct IJK_GLES2_ShaderProgram
     GLuint av2_texcoord;
     GLuint um4_mvp;
 
-    GLuint framebuffer;
+    GLuint screenSize;
+    GLuint us2_sampler[MAX_SAMPLERS];
+    GLuint um3_color_conversion;
+
 } IJK_GLES2_ShaderProgram;
 
 typedef struct IJK_GLES2_Renderer
 {
     IJK_GLES2_Renderer_Opaque *opaque;
 
-    IJK_GLES2_ShaderProgram frame_decode;
-    IJK_GLES2_ShaderProgram logo_detection;
-    IJK_GLES2_ShaderProgram logo_removal;
+    IJK_GLES2_ShaderProgram prog_frame_decode;
+    IJK_GLES2_ShaderProgram prog_logo_detection;
+    IJK_GLES2_ShaderProgram prog_logo_removal;
+    IJK_GLES2_ShaderProgram prog_blit;
+    IJK_GLES2_ShaderProgram prog_flip_blit;
+    IJK_GLES2_ShaderProgram prog_logo_debug;
 
     GLuint plane_textures[IJK_GLES2_MAX_PLANE];
 
-    GLuint frame_current;
-    GLuint frame_reference;
-    GLuint frame_template_using;
-    GLuint frame_template_building;
-
-    GLuint us2_sampler[IJK_GLES2_MAX_PLANE];
-    GLuint um3_color_conversion;
+    GLuint frame_current, framebuffer_decode;
+    GLuint frame_last, framebuffer_lastFrame;
+    GLuint frame_final, framebuffer_final;
+    GLuint frame_reference_using, framebuffer_ref_using;
+    GLuint frame_logo_using, framebuffer_logo_using;
+    GLuint frame_reference_building, framebuffer_ref_building;
+    GLuint frame_logo_building, framebuffer_logo_building;
+    GLuint frame_logo_temp, framebuffer_logo_temp;
 
     GLboolean (*func_use)(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog);
     GLsizei   (*func_getBufferWidth)(IJK_GLES2_Renderer *renderer, SDL_VoutOverlay *overlay);
@@ -89,6 +100,10 @@ typedef struct IJK_GLES2_Renderer
     int     frame_sar_num;
     int     frame_sar_den;
 
+    int64_t current_milli;
+    int64_t ref_using_milli;
+    int64_t logo_built_milli;
+
     GLsizei last_buffer_width;
 } IJK_GLES2_Renderer;
 
@@ -103,8 +118,10 @@ const char *IJK_GLES2_getFragmentShader_yuv420p();
 const char *IJK_GLES2_getFragmentShader_yuv444p10le();
 const char *IJK_GLES2_getFragmentShader_yuv420sp();
 const char *IJK_GLES2_getFragmentShader_rgb();
+const char *IJK_GLES2_getFragmentShader_flip_blit();
 const char *IJK_GLES2_getFragmentShader_logo_detection();
 const char *IJK_GLES2_getFragmentShader_logo_removal();
+const char *IJK_GLES2_getFragmentShader_logo_debug();
 
 const GLfloat *IJK_GLES2_getColorMatrix_bt709();
 const GLfloat *IJK_GLES2_getColorMatrix_bt601();

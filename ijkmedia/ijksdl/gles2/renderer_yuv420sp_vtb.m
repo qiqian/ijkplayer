@@ -34,16 +34,14 @@ typedef struct IJK_GLES2_Renderer_Opaque
 
 static GLboolean yuv420sp_vtb_use(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog)
 {
-    ALOGI("use render yuv420sp_vtb\n");
+    ALOGD("use render yuv420sp_vtb\n");
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    glUseProgram(prog->program);            IJK_GLES2_checkError_TRACE("glUseProgram");
-
     for (int i = 0; i < 2; ++i) {
-        glUniform1i(renderer->us2_sampler[i], i);
+        glUniform1i(prog->us2_sampler[i], i);
     }
 
-    glUniformMatrix3fv(renderer->um3_color_conversion, 1, GL_FALSE, IJK_GLES2_getColorMatrix_bt709());
+    glUniformMatrix3fv(prog->um3_color_conversion, 1, GL_FALSE, IJK_GLES2_getColorMatrix_bt709());
     
     return GL_TRUE;
 }
@@ -220,11 +218,6 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create_yuv420sp_vtb(SDL_VoutOverlay *over
     IJK_GLES2_Renderer *renderer = IJK_GLES2_Renderer_create_base(IJK_GLES2_getFragmentShader_yuv420sp());
     if (!renderer)
         goto fail;
-
-    renderer->us2_sampler[0] = glGetUniformLocation(renderer->program, "us2_SamplerX"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerX)");
-    renderer->us2_sampler[1] = glGetUniformLocation(renderer->program, "us2_SamplerY"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(us2_SamplerY)");
-
-    renderer->um3_color_conversion = glGetUniformLocation(renderer->program, "um3_ColorConversion"); IJK_GLES2_checkError_TRACE("glGetUniformLocation(um3_ColorConversionMatrix)");
 
     renderer->func_use            = yuv420sp_vtb_use;
     renderer->func_getBufferWidth = yuv420sp_vtb_getBufferWidth;
