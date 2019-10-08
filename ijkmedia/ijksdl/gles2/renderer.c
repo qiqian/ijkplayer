@@ -85,6 +85,8 @@ void IJK_GLES2_Renderer_reset(IJK_GLES2_Renderer *renderer)
         }
     }
 
+    glDeleteBuffers(1, &renderer->logo_buffer);
+
     glDeleteTextures(1, &renderer->frame_current);
     glDeleteTextures(1, &renderer->frame_last);
     glDeleteTextures(1, &renderer->frame_final);
@@ -121,6 +123,7 @@ static void IJK_GLES2_Renderer_setup_Framebuffers(GLuint * frame, GLuint * frame
 void IJK_GLES2_Renderer_setPostproess(IJK_GLES2_Renderer *renderer, int overlay_width, int overlay_height)
 {
     // create textures
+    glGenBuffers(1, &renderer->logo_buffer);
     IJK_GLES2_Renderer_setup_Framebuffers(&renderer->frame_current, &renderer->framebuffer_decode, 0, overlay_width, overlay_height);
     IJK_GLES2_Renderer_setup_Framebuffers(&renderer->frame_last, &renderer->framebuffer_lastFrame, 0, overlay_width, overlay_height);
     IJK_GLES2_Renderer_setup_Framebuffers(&renderer->frame_final, &renderer->framebuffer_final, 0, overlay_width, overlay_height);
@@ -154,6 +157,13 @@ void IJK_GLES2_Renderer_free(IJK_GLES2_Renderer *renderer)
             ALOGW("[GLES2] renderer: plane texture[%d] not deleted.\n", i);
     }
 #endif
+
+    ALOGD("wait for logo_data_analyzer_tid");
+    renderer->abort_request = 1;
+    SDL_WaitThread(renderer->logo_data_analyzer_tid, NULL);
+
+    SDL_DestroyCond(renderer->logo_data_cond);
+    SDL_DestroyMutex(renderer->logo_data_mutex);
 
     free(renderer);
 }
@@ -229,6 +239,16 @@ fail:
     return NULL;
 }
 
+void analyze_logo(IJK_GLES2_Renderer * renderer);
+static int logo_analyze_thread(void *arg)
+{
+    IJK_GLES2_Renderer *renderer = arg;
+    while (!renderer->abort_request) {
+        if (SDL_CondWaitTimeout(renderer->logo_data_cond, renderer->logo_data_mutex, 16) == 0)
+            analyze_logo(renderer);
+    }
+    return 0;
+}
 
 IJK_GLES2_Renderer *IJK_GLES2_Renderer_create(SDL_VoutOverlay *overlay)
 {
@@ -270,6 +290,16 @@ IJK_GLES2_Renderer *IJK_GLES2_Renderer_create(SDL_VoutOverlay *overlay)
         goto fail;
     if (!IJK_GLES2_create_ShaderProgram(&renderer->prog_flip_blit, IJK_GLES2_getFragmentShader_flip_blit()))
         goto fail;
+
+    // start logo analyer
+    renderer->abort_request = 0;
+    renderer->logo_data_mutex = SDL_CreateMutex();
+    renderer->logo_data_cond = SDL_CreateCond();
+    renderer->logo_data_analyzer_tid = SDL_CreateThreadEx(&renderer->_logo_data_analyzer_tid, logo_analyze_thread, renderer, "logo_analyzer");
+    if (!renderer->logo_data_analyzer_tid) {
+        ALOGE("SDL_CreateThread(): %s", SDL_GetError());
+        goto fail;
+    }
 
     return renderer;
 
@@ -608,11 +638,40 @@ GLboolean IJK_GLES2_Renderer_renderOverlay(IJK_GLES2_Renderer *renderer, SDL_Vou
         IJK_GLES2_Renderer_setupTexture(&renderer->prog_logo_detection, 3, renderer->frame_logo_temp);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);      IJK_GLES2_checkError_TRACE("glDrawArrays");
         // promote to new logo
-        if (renderer->current_milli - renderer->ref_using_milli > 1000 * 120) {
+        if (renderer->logo_processing == 0) {
+            if (renderer->current_milli - renderer->ref_using_milli > 1000 * 120) {
+                renderer->logo_processing = 1;
+                // start read back
+                ALOGI("[QQ] logo read back");
+                glBindBuffer(GL_PIXEL_PACK_BUFFER, renderer->logo_buffer); IJK_GLES2_checkError_TRACE("glBindBuffer");
+                glBufferData(GL_PIXEL_PACK_BUFFER, renderer->frame_width * renderer->frame_height * 4, 0, GL_STREAM_READ); IJK_GLES2_checkError_TRACE("glBufferData");
+                glReadPixels(0, 0, renderer->frame_width, renderer->frame_height, GL_RGBA, GL_UNSIGNED_BYTE, 0); IJK_GLES2_checkError_TRACE("glReadPixels");
+            }
+        }
+        else if (renderer->logo_processing == 1) {
+            // read back
+            ALOGI("[QQ] built new logo, almost done");
+            // 使用前先绑定
+            glBindBuffer(GL_PIXEL_PACK_BUFFER, renderer->logo_buffer); IJK_GLES2_checkError_TRACE("glBindBuffer");
+            // pbo读取成功，进行map
+            void* pointer = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, renderer->frame_width * renderer->frame_height * 4, GL_MAP_READ_BIT);
+            IJK_GLES2_checkError_TRACE("glMapBufferRange");
+            if (pointer) {
+                // 处理数据
+                renderer->logo_processing = 2;
+                SDL_CondSignal(renderer->logo_data_cond);
+            }
+            else {
+                // wait
+            }
+        }
+        else if (renderer->logo_processing == 3) {
+            ALOGI("[QQ] built new logo");
+            renderer->logo_processing = 0;
             renderer->logo_built_milli = renderer->current_milli;
+            glUnmapBuffer(GL_PIXEL_PACK_BUFFER); IJK_GLES2_checkError_TRACE("glUnmapBuffer");
             IJK_GLES2_blit(renderer, renderer->frame_reference_building, renderer->framebuffer_ref_using, 1);
             IJK_GLES2_blit(renderer, renderer->frame_logo_building, renderer->framebuffer_logo_using, 1);
-            ALOGI("[QQ] built new logo");
         }
     }
 
@@ -659,3 +718,9 @@ GLboolean IJK_GLES2_Renderer_renderOverlay(IJK_GLES2_Renderer *renderer, SDL_Vou
 
     return GL_TRUE;
 }
+
+void analyze_logo(IJK_GLES2_Renderer * renderer)
+{
+    renderer->logo_processing = 3;
+}
+   

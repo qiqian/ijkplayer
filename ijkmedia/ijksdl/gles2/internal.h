@@ -28,6 +28,8 @@
 #include "ijksdl/ijksdl_log.h"
 #include "ijksdl/ijksdl_gles2.h"
 #include "ijksdl/ijksdl_vout.h"
+#include "ijksdl/ijksdl_mutex.h"
+#include "ijksdl/ijksdl_thread.h"
 
 #define IJK_GLES_STRINGIZE(x)   #x
 #define IJK_GLES_STRINGIZE2(x)  IJK_GLES_STRINGIZE(x)
@@ -69,6 +71,7 @@ typedef struct IJK_GLES2_Renderer
 
     GLuint plane_textures[IJK_GLES2_MAX_PLANE];
 
+    GLuint logo_buffer;
     GLuint frame_current, framebuffer_decode;
     GLuint frame_last, framebuffer_lastFrame;
     GLuint frame_final, framebuffer_final;
@@ -77,6 +80,15 @@ typedef struct IJK_GLES2_Renderer
     GLuint frame_reference_building, framebuffer_ref_building;
     GLuint frame_logo_building, framebuffer_logo_building;
     GLuint frame_logo_temp, framebuffer_logo_temp;
+
+    /* logo detection */
+    SDL_mutex * logo_data_mutex;
+    SDL_cond *  logo_data_cond;
+    SDL_Thread * logo_data_analyzer_tid;
+    SDL_Thread _logo_data_analyzer_tid;
+    char * logo_data;
+    int abort_request;
+    int logo_processing;
 
     GLboolean (*func_use)(IJK_GLES2_Renderer *renderer, IJK_GLES2_ShaderProgram * prog);
     GLsizei   (*func_getBufferWidth)(IJK_GLES2_Renderer *renderer, SDL_VoutOverlay *overlay);
